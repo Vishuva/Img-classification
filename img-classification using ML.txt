@@ -1,0 +1,59 @@
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.datasets import cifar10
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+# Load CIFAR-10 dataset
+(X_train, y_train), (X_test, y_test) = cifar10.load_data()
+
+# Normalize pixel values to range [0, 1]
+X_train = X_train / 255.0
+X_test = X_test / 255.0
+
+# Convert labels to one-hot encoded format
+y_train = tf.keras.utils.to_categorical(y_train, num_classes=10)
+y_test = tf.keras.utils.to_categorical(y_test, num_classes=10)
+
+# Define CNN model
+model = Sequential([
+    Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation='relu'),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation='relu'),
+    Flatten(),
+    Dense(64, activation='relu'),
+    Dropout(0.5),
+    Dense(10, activation='softmax')
+])
+
+# Compile model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Data augmentation
+datagen = ImageDataGenerator(
+    rotation_range=15,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    horizontal_flip=True,
+    vertical_flip=False
+)
+
+# Fit data augmentation generator to training data
+datagen.fit(X_train)
+
+# Train the model
+batch_size = 64
+epochs = 15
+history = model.fit(
+    datagen.flow(X_train, y_train, batch_size=batch_size),
+    steps_per_epoch=len(X_train) // batch_size,
+    epochs=epochs,
+    validation_data=(X_test, y_test)
+)
+
+# Evaluate the model on test data
+test_loss, test_accuracy = model.evaluate(X_test, y_test)
+print(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
